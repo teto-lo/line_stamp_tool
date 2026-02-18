@@ -1,0 +1,17 @@
+slack-bolt
+slack-sdk
+google-generativeai
+requests
+rembg
+Pillow
+sqlalchemy
+fastapi
+uvicorn
+jinja2
+python-dotenv
+aiofiles
+uuid
+datetime
+pathlib
+threading
+asyncio

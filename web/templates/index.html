@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINEスタンプ自動生成ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group label {
+            font-weight: 500;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .filter-group a {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .filter-group a:hover {
+            background: #2980b9;
+        }
+        
+        .stamp-sets {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .stamp-set-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stamp-set-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .stamp-set-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .stamp-set-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stamp-set-id {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            font-family: monospace;
+        }
+        
+        .stamp-set-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .status-direction_pending { background: #fff3cd; color: #856404; }
+        .status-direction_approved { background: #d4edda; color: #155724; }
+        .status-patterns_pending { background: #cce5ff; color: #004085; }
+        .status-patterns_approved { background: #d1ecf1; color: #0c5460; }
+        .status-samples_generating { background: #f8d7da; color: #721c24; }
+        .status-samples_review { background: #e2e3e5; color: #383d41; }
+        .status-full_generating { background: #ffeaa7; color: #d63031; }
+        .status-full_review { background: #dfe6e9; color: #2d3436; }
+        .status-completed { background: #d4edda; color: #155724; }
+        
+        .stamp-set-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+        
+        .empty-state h2 {
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .stamp-set-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .stamp-set-meta {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 LINEスタンプ自動生成ツール</h1>
+            <p>スタンプセットの管理・確認ができます</p>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="status-filter">ステータス:</label>
+                <select id="status-filter" onchange="filterSets()">
+                    <option value="">すべて</option>
+                    <option value="direction_pending" {% if selected_status == 'direction_pending' %}selected{% endif %}>方向性待ち</option>
+                    <option value="direction_approved" {% if selected_status == 'direction_approved' %}selected{% endif %}>方向性承認済み</option>
+                    <option value="patterns_pending" {% if selected_status == 'patterns_pending' %}selected{% endif %}>フレーズ待ち</option>
+                    <option value="patterns_approved" {% if selected_status == 'patterns_approved' %}selected{% endif %}>フレーズ承認済み</option>
+                    <option value="samples_generating" {% if selected_status == 'samples_generating' %}selected{% endif %}>サンプル生成中</option>
+                    <option value="samples_review" {% if selected_status == 'samples_review' %}selected{% endif %}>サンプル確認中</option>
+                    <option value="full_generating" {% if selected_status == 'full_generating' %}selected{% endif %}>全体生成中</option>
+                    <option value="full_review" {% if selected_status == 'full_review' %}selected{% endif %}>全体確認中</option>
+                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>完了</option>
+                </select>
+                
+                <label for="genre-filter">ジャンル:</label>
+                <select id="genre-filter" onchange="filterSets()">
+                    <option value="">すべて</option>
+                    {% for genre in genres %}
+                    <option value="{{ genre }}" {% if selected_genre == genre %}selected{% endif %}>{{ genre }}</option>
+                    {% endfor %}
+                </select>
+                
+                <a href="/">リセット</a>
+            </div>
+        </div>
+        
+        <div class="stamp-sets">
+            {% if stamp_sets %}
+                {% for set in stamp_sets %}
+                <div class="stamp-set-card">
+                    <div class="stamp-set-header">
+                        <div>
+                            <div class="stamp-set-title">{{ set.name }}</div>
+                            <div class="stamp-set-id">ID: {{ set.id[:8] }}...</div>
+                        </div>
+                        <span class="status-badge status-{{ set.status }}">
+                            {% if set.status == 'direction_pending' %}方向性待ち
+                            {% elif set.status == 'direction_approved' %}方向性承認済み
+                            {% elif set.status == 'patterns_pending' %}フレーズ待ち
+                            {% elif set.status == 'patterns_approved' %}フレーズ承認済み
+                            {% elif set.status == 'samples_generating' %}サンプル生成中
+                            {% elif set.status == 'samples_review' %}サンプル確認中
+                            {% elif set.status == 'full_generating' %}全体生成中
+                            {% elif set.status == 'full_review' %}全体確認中
+                            {% elif set.status == 'completed' %}完了
+                            {% else %}{{ set.status }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="stamp-set-meta">
+                        <div class="meta-item">
+                            <span>🎭</span>
+                            <span>{{ set.genre or '未設定' }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>📊</span>
+                            <span>{{ set.stamp_count }}枚</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>📅</span>
+                            <span>{{ set.created_at.strftime('%Y/%m/%d %H:%M') }}</span>
+                        </div>
+                        {% if set.lora_exported %}
+                        <div class="meta-item">
+                            <span>🤖</span>
+                            <span>LoRA済み</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="stamp-set-actions">
+                        <a href="/set/{{ set.id }}" class="btn btn-primary">詳細を見る</a>
+                        {% if set.status == 'completed' %}
+                        <a href="/set/{{ set.id }}/export-lora" class="btn btn-secondary" onclick="exportLora('{{ set.id }}'); return false;">LoRAエクスポート</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <h2>スタンプセットがありません</h2>
+                    <p>Slackで `/stamp new` コマンドを実行して新しいスタンプセットを作成してください</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function filterSets() {
+            const status = document.getElementById('status-filter').value;
+            const genre = document.getElementById('genre-filter').value;
+            
+            let url = '/';
+            const params = [];
+            
+            if (status) params.push(`status=${status}`);
+            if (genre) params.push(`genre=${genre}`);
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            window.location.href = url;
+        }
+        
+        async function exportLora(setId) {
+            try {
+                const response = await fetch(`/set/${setId}/export-lora`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('LoRAデータのエクスポートが完了しました！');
+                    location.reload();
+                } else {
+                    alert('エクスポートに失敗しました: ' + result.detail);
+                }
+            } catch (error) {
+                alert('エラーが発生しました: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

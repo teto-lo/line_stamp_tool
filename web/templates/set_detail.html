@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ stamp_set.name }} - 詳細</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .breadcrumb {
+            margin-bottom: 15px;
+        }
+        
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .info-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .info-item {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: #7f8c8d;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            flex: 1;
+            word-break: break-word;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .status-direction_pending { background: #fff3cd; color: #856404; }
+        .status-direction_approved { background: #d4edda; color: #155724; }
+        .status-patterns_pending { background: #cce5ff; color: #004085; }
+        .status-patterns_approved { background: #d1ecf1; color: #0c5460; }
+        .status-samples_generating { background: #f8d7da; color: #721c24; }
+        .status-samples_review { background: #e2e3e5; color: #383d41; }
+        .status-full_generating { background: #ffeaa7; color: #d63031; }
+        .status-full_review { background: #dfe6e9; color: #2d3436; }
+        .status-completed { background: #d4edda; color: #155724; }
+        
+        .grid-preview {
+            margin-top: 15px;
+        }
+        
+        .grid-preview img {
+            max-width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stamps-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stamps-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .stamps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stamp-card {
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stamp-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stamp-image {
+            width: 100%;
+            height: 150px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .stamp-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .stamp-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .stamp-info {
+            padding: 15px;
+        }
+        
+        .stamp-phrase {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .stamp-meta {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        
+        .stamp-status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 500;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+        .status-regenerating { background: #cce5ff; color: #004085; }
+        
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .no-image {
+            color: #bdc3c7;
+            font-size: 2em;
+        }
+        
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stamps-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="breadcrumb">
+                <a href="/">🏠 トップ</a> > {{ stamp_set.name }}
+            </div>
+            <h1>{{ stamp_set.name }}</h1>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>📋 基本情報</h3>
+                <div class="info-item">
+                    <span class="info-label">ID:</span>
+                    <span class="info-value">{{ stamp_set.id }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">名前:</span>
+                    <span class="info-value">{{ stamp_set.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ジャンル:</span>
+                    <span class="info-value">{{ stamp_set.genre or '未設定' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ステータス:</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ stamp_set.status }}">
+                            {% if stamp_set.status == 'direction_pending' %}方向性待ち
+                            {% elif stamp_set.status == 'direction_approved' %}方向性承認済み
+                            {% elif stamp_set.status == 'patterns_pending' %}フレーズ待ち
+                            {% elif stamp_set.status == 'patterns_approved' %}フレーズ承認済み
+                            {% elif stamp_set.status == 'samples_generating' %}サンプル生成中
+                            {% elif stamp_set.status == 'samples_review' %}サンプル確認中
+                            {% elif stamp_set.status == 'full_generating' %}全体生成中
+                            {% elif stamp_set.status == 'full_review' %}全体確認中
+                            {% elif stamp_set.status == 'completed' %}完了
+                            {% else %}{{ stamp_set.status }}
+                            {% endif %}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">作成日時:</span>
+                    <span class="info-value">{{ stamp_set.created_at.strftime('%Y/%m/%d %H:%M:%S') }}</span>
+                </div>
+                {% if stamp_set.approved_at %}
+                <div class="info-item">
+                    <span class="info-label">承認日時:</span>
+                    <span class="info-value">{{ stamp_set.approved_at.strftime('%Y/%m/%d %H:%M:%S') }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">LoRA出力:</span>
+                    <span class="info-value">
+                        {% if stamp_set.lora_exported %}✅ 済み{% else %}❌ 未{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎭 キャラクター設定</h3>
+                {% if stamp_set.character_description %}
+                <div class="info-item">
+                    <span class="info-value">{{ stamp_set.character_description|nl2br }}</span>
+                </div>
+                {% else %}
+                <p style="color: #7f8c8d;">キャラクター設定がありません</p>
+                {% endif %}
+                
+                {% if sample_grid_path %}
+                <div class="grid-preview">
+                    <h4>📸 サンプル画像</h4>
+                    <img src="{{ sample_grid_path }}" alt="サンプルスタンプ">
+                </div>
+                {% endif %}
+                
+                {% if full_grid_path %}
+                <div class="grid-preview">
+                    <h4>🖼️ 完成画像</h4>
+                    <img src="{{ full_grid_path }}" alt="完成スタンプ">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="stamps-section">
+            <div class="stamps-header">
+                <h3>🎨 スタンプ一覧 ({{ stamps|length }}枚)</h3>
+                {% if stamp_set.status == 'completed' %}
+                <a href="/set/{{ stamp_set.id }}/export-lora" class="btn btn-secondary" onclick="exportLora('{{ stamp_set.id }}'); return false;">🤖 LoRAエクスポート</a>
+                {% endif %}
+            </div>
+            
+            <div class="stamps-grid">
+                {% for stamp in stamps %}
+                <div class="stamp-card">
+                    <div class="stamp-image">
+                        {% if stamp.image_path %}
+                            <img src="{{ stamp.image_path }}" alt="{{ stamp.phrase }}">
+                        {% else %}
+                            <div class="no-image">📷</div>
+                        {% endif %}
+                        <span class="stamp-number">{{ stamp.number }}</span>
+                        {% if stamp.is_sample %}
+                        <span class="stamp-number" style="right: 5px; left: auto;">📋</span>
+                        {% endif %}
+                    </div>
+                    <div class="stamp-info">
+                        <div class="stamp-phrase">{{ stamp.phrase }}</div>
+                        <div class="stamp-meta">
+                            {% if stamp.seed %}Seed: {{ stamp.seed }}{% endif %}
+                        </div>
+                        <span class="stamp-status status-{{ stamp.status }}">
+                            {% if stamp.status == 'pending' %}待機中
+                            {% elif stamp.status == 'approved' %}承認済み
+                            {% elif stamp.status == 'rejected' %}却下
+                            {% elif stamp.status == 'regenerating' %}再生成中
+                            {% else %}{{ stamp.status }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="actions">
+            <a href="/" class="btn btn-primary">🏠 トップに戻る</a>
+        </div>
+    </div>
+    
+    <script>
+        async function exportLora(setId) {
+            try {
+                const response = await fetch(`/set/${setId}/export-lora`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('LoRAデータのエクスポートが完了しました！');
+                    location.reload();
+                } else {
+                    alert('エクスポートに失敗しました: ' + result.detail);
+                }
+            } catch (error) {
+                alert('エラーが発生しました: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
