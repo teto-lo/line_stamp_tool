@@ -15,3 +15,5 @@ datetime
 pathlib
 threading
 asyncio
+fpdf2
+subprocess

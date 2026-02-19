@@ -40,6 +40,46 @@ class SlackBot:
             else:
                 await self._handle_help_command(body)
         
+        @self.app.action("regenerate_stamp")
+        async def handle_regenerate_stamp(ack, body, logger):
+            await ack()
+            await self._handle_regenerate_stamp(body)
+        
+        @self.app.action("resume_generation")
+        async def handle_resume_generation(ack, body, logger):
+            await ack()
+            await self._handle_resume_generation(body)
+        
+        @self.app.action("restart_generation")
+        async def handle_restart_generation(ack, body, logger):
+            await ack()
+            await self._handle_restart_generation(body)
+        
+        @self.app.action("train_lora")
+        async def handle_train_lora(ack, body, logger):
+            await ack()
+            await self._handle_train_lora(body)
+        
+        @self.app.action("skip_lora")
+        async def handle_skip_lora(ack, body, logger):
+            await ack()
+            await self._handle_skip_lora(body)
+        
+        @self.app.action("create_variation")
+        async def handle_create_variation(ack, body, logger):
+            await ack()
+            await self._handle_create_variation(body)
+        
+        @self.app.action("select_variation_theme")
+        async def handle_select_variation_theme(ack, body, logger):
+            await ack()
+            await self._handle_select_variation_theme(body)
+        
+        @self.app.action("export_booth")
+        async def handle_export_booth(ack, body, logger):
+            await ack()
+            await self._handle_export_booth(body)
+        
         @self.app.action("select_stamp_type")
         async def handle_select_stamp_type(ack, body, logger):
             await ack()
@@ -562,3 +602,135 @@ class SlackBot:
         """Send welcome message with quick start button"""
         blocks = get_welcome_blocks()
         await self._send_message("🎨 LINEスタンプ自動生成ツールが起動しました！", blocks=blocks)
+    
+    async def _handle_regenerate_stamp(self, body: Dict):
+        """Handle individual stamp regeneration"""
+        set_id, stamp_id = body["actions"][0]["value"].split(":")
+        self.workflow_manager.regenerate_single_stamp(set_id, stamp_id)
+    
+    async def _handle_resume_generation(self, body: Dict):
+        """Handle generation resume"""
+        set_id = body["actions"][0]["value"]
+        self.workflow_manager.resume_generation(set_id)
+    
+    async def _handle_restart_generation(self, body: Dict):
+        """Handle generation restart"""
+        set_id = body["actions"][0]["value"]
+        self.workflow_manager.restart_generation(set_id)
+    
+    async def _handle_train_lora(self, body: Dict):
+        """Handle LoRA training"""
+        set_id = body["actions"][0]["value"]
+        self.workflow_manager.train_lora(set_id)
+    
+    async def _handle_skip_lora(self, body: Dict):
+        """Handle LoRA skip"""
+        set_id = body["actions"][0]["value"]
+        self.workflow_manager.skip_lora(set_id)
+    
+    async def _handle_create_variation(self, body: Dict):
+        """Handle variation creation"""
+        set_id = body["actions"][0]["value"]
+        await self._show_variation_theme_selection(set_id)
+    
+    async def _show_variation_theme_selection(self, set_id: str):
+        """Show variation theme selection"""
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"バリエーションテーマを選択してください："
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "🎄 クリスマス"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:christmas"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "🎃 ハロウィン"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:halloween"
+                    }
+                ]
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "🌸 春・お花見"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:spring"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "🎆 お正月"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:newyear"
+                    }
+                ]
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "💝 バレンタイン"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:valentine"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "➕ カスタム入力"},
+                        "action_id": "select_variation_theme",
+                        "value": f"{set_id}:custom"
+                    }
+                ]
+            }
+        ]
+        
+        await self._send_message("🎄 バリエーションテーマを選択", blocks=blocks)
+    
+    async def _handle_select_variation_theme(self, body: Dict):
+        """Handle variation theme selection"""
+        set_id, theme = body["actions"][0]["value"].split(":")
+        
+        if theme == "custom":
+            # Open modal for custom theme input
+            await self.client.views_open(
+                trigger_id=body["trigger_id"],
+                view={
+                    "type": "modal",
+                    "callback_id": "custom_theme_modal",
+                    "title": {"type": "plain_text", "text": "カスタムテーマ"},
+                    "submit": {"type": "plain_text", "text": "作成"},
+                    "blocks": [
+                        {
+                            "type": "input",
+                            "block_id": "custom_theme",
+                            "element": {
+                                "type": "plain_text_input",
+                                "action_id": "theme",
+                                "placeholder": {"type": "plain_text", "text": "テーマを入力してください"},
+                                "multiline": True
+                            },
+                            "label": {"type": "plain_text", "text": "テーマ"}
+                        }
+                    ],
+                    "private_metadata": set_id
+                }
+            )
+        else:
+            self.workflow_manager.create_variation(set_id, theme)
+    
+    async def _handle_export_booth(self, body: Dict):
+        """Handle BOOTH export"""
+        set_id = body["actions"][0]["value"]
+        self.workflow_manager.export_for_booth(set_id)

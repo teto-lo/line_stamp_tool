@@ -11,14 +11,17 @@ class StampSetCRUD:
     
     def create(self, name: str, genre: str, character_description: str = None, 
                reference_image_path: str = None, slack_ts: str = None, 
-               character_consistency: bool = True) -> StampSet:
+               character_consistency: bool = True, parent_set_id: str = None,
+               variation_theme: str = None) -> StampSet:
         stamp_set = StampSet(
             name=name,
             genre=genre,
             character_description=character_description,
             reference_image_path=reference_image_path,
             slack_ts=slack_ts,
-            character_consistency=character_consistency
+            character_consistency=character_consistency,
+            parent_set_id=parent_set_id,
+            variation_theme=variation_theme
         )
         self.db.add(stamp_set)
         self.db.commit()
@@ -79,6 +82,22 @@ class StampSetCRUD:
             self.db.refresh(stamp_set)
         return stamp_set
     
+    def update_lora_status(self, set_id: str, lora_status: str, lora_model_path: str = None) -> Optional[StampSet]:
+        stamp_set = self.get(set_id)
+        if stamp_set:
+            stamp_set.lora_status = lora_status
+            if lora_model_path:
+                stamp_set.lora_model_path = lora_model_path
+            self.db.commit()
+            self.db.refresh(stamp_set)
+        return stamp_set
+    
+    def get_variations(self, parent_set_id: str) -> List[StampSet]:
+        return self.db.query(StampSet).filter(StampSet.parent_set_id == parent_set_id).all()
+    
+    def get_completed_sets(self) -> List[StampSet]:
+        return self.db.query(StampSet).filter(StampSet.status == 'completed').all()
+    
     def mark_lora_exported(self, set_id: str) -> Optional[StampSet]:
         stamp_set = self.get(set_id)
         if stamp_set:
@@ -115,6 +134,26 @@ class StampCRUD:
         if is_sample is not None:
             query = query.filter(Stamp.is_sample == is_sample)
         return query.order_by(Stamp.number).all()
+    
+    def get_pending_stamps(self, set_id: str) -> List[Stamp]:
+        return self.db.query(Stamp).filter(
+            Stamp.set_id == set_id,
+            Stamp.status == 'pending'
+        ).order_by(Stamp.number).all()
+    
+    def get_completed_count(self, set_id: str) -> int:
+        return self.db.query(Stamp).filter(
+            Stamp.set_id == set_id,
+            Stamp.status == 'approved'
+        ).count()
+    
+    def increment_retry_count(self, stamp_id: str) -> Optional[Stamp]:
+        stamp = self.get(stamp_id)
+        if stamp:
+            stamp.retry_count += 1
+            self.db.commit()
+            self.db.refresh(stamp)
+        return stamp
     
     def update_status(self, stamp_id: str, status: str) -> Optional[Stamp]:
         stamp = self.get(stamp_id)

@@ -22,8 +22,17 @@ class StampSet(Base):
     seed = Column(Integer, nullable=True)
     character_consistency = Column(Boolean, default=True)  # キャラクターの一貫性が必要か
     
+    # LoRA関連
+    lora_model_path = Column(String, nullable=True)  # 学習済みLoRAモデルのパス
+    lora_status = Column(String, nullable=False, default='none')  # 'none' / 'training' / 'completed'
+    
+    # バリエーション関連
+    parent_set_id = Column(String, nullable=True)  # バリエーション元のset_id
+    variation_theme = Column(String, nullable=True)  # バリエーションテーマ
+    
     # Relationship
     stamps = relationship("Stamp", back_populates="set", cascade="all, delete-orphan")
+    variations = relationship("StampSet", remote_side=[id], backref="parent")
     
     # Status constants
     STATUSES = [
@@ -52,6 +61,7 @@ class Stamp(Base):
     seed = Column(Integer, nullable=True)
     is_sample = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    retry_count = Column(Integer, default=0)  # 再生成回数
     
     # Relationship
     set = relationship("StampSet", back_populates="stamps")

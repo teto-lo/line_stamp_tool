@@ -8,6 +8,8 @@ import os
 from .gemini import GeminiClient
 from .sd_api import StableDiffusionAPI
 from .image_utils import ImageProcessor
+from .lora_trainer import LoRATrainer
+from .booth_exporter import BoothExporter
 from ..db.models import StampSet, Stamp
 from ..db.crud import StampSetCRUD, StampCRUD
 from ..db.models import init_db, get_session
@@ -22,6 +24,10 @@ class StampWorkflowManager:
         self.image_processor = ImageProcessor(
             os.getenv('OUTPUT_DIR', './output'),
             os.getenv('LORA_EXPORT_DIR', './lora_export')
+        )
+        self.lora_trainer = LoRATrainer()
+        self.booth_exporter = BoothExporter(
+            os.getenv('OUTPUT_DIR', './output')
         )
         
         # Initialize database
@@ -275,8 +281,12 @@ class StampWorkflowManager:
                     # Use different seed for each stamp if no character consistency
                     current_seed = seed + i if seed else random.randint(1, 1000000)
                     
+                    # Check for existing LoRA
+                    lora_path = self.lora_trainer.get_lora_path(set_id)
+                    prompt = self.lora_trainer.build_prompt_with_lora(stamp.prompt, set_id, lora_path)
+                    
                     image_data = self.sd_api.generate_image(
-                        prompt=stamp.prompt,
+                        prompt=prompt,
                         negative_prompt=stamp.negative_prompt or "",
                         seed=current_seed,
                         reference_image_path=stamp_set.reference_image_path if stamp_set.character_consistency else None
@@ -289,6 +299,7 @@ class StampWorkflowManager:
                         stamp_crud.update_image_path(stamp.id, image_path)
                         
                         generated_stamps.append({
+                            'id': stamp.id,
                             'number': stamp.number,
                             'image_path': image_path,
                             'phrase': stamp.phrase
@@ -297,9 +308,10 @@ class StampWorkflowManager:
                 # Create grid image
                 grid_path = self.image_processor.create_grid_image(set_id, generated_stamps, is_sample=True)
                 
-                # Update status and notify
+                # Update status and notify with retry buttons
                 crud.update_status(set_id, 'samples_review')
                 
+                # Build blocks with individual retry buttons
                 blocks = [
                     {
                         "type": "section",
@@ -309,31 +321,54 @@ class StampWorkflowManager:
                         "type": "image",
                         "image_url": f"file://{grid_path}",
                         "alt_text": "Sample stamps grid"
-                    },
-                    {
+                    }
+                ]
+                
+                # Add individual stamp blocks with retry buttons
+                for stamp in generated_stamps:
+                    blocks.append({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*スタンプ {stamp['number']:02d}*: {stamp['phrase']}"
+                        }
+                    })
+                    blocks.append({
                         "type": "actions",
                         "elements": [
                             {
                                 "type": "button",
-                                "text": {"type": "plain_text", "text": "✅ このスタイルで全部作る"},
-                                "action_id": "approve_samples",
-                                "value": set_id
+                                "text": {"type": "plain_text", "text": "✅ OK"},
+                                "action_id": "approve_sample_stamp",
+                                "value": f"{set_id}:{stamp['id']}"
                             },
                             {
                                 "type": "button",
-                                "text": {"type": "plain_text", "text": "❌ やり直し"},
-                                "action_id": "reject_samples",
-                                "value": set_id
-                            },
-                            {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "🔁 個別修正"},
-                                "action_id": "modify_individual",
-                                "value": set_id
+                                "text": {"type": "plain_text", "text": "🔄 再生成"},
+                                "action_id": "regenerate_stamp",
+                                "value": f"{set_id}:{stamp['id']}"
                             }
                         ]
-                    }
-                ]
+                    })
+                
+                # Add overall action buttons
+                blocks.append({
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "✅ このスタイルで全部作る"},
+                            "action_id": "approve_samples",
+                            "value": set_id
+                        },
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "❌ やり直し"},
+                            "action_id": "reject_samples",
+                            "value": set_id
+                        }
+                    ]
+                })
                 
                 self._notify_slack("🎨 サンプルスタンプが完成しました", blocks)
                 
